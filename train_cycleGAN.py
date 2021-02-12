@@ -24,7 +24,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
-parser.add_argument('--dataroot', type=str, default='datasets/horse2zebra/', help='root directory of the dataset')
+parser.add_argument('--dataroot', type=str, default='data/visualgenome2artpedia/', help='root directory of the dataset')
+parser.add_argument('--label_datasetA', type=str,default='visualgenome', help='label of the dataset to transform')
+parser.add_argument('--label_datasetB', type=str,default='artpedia', help='label of the dataset to transformation')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
 parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
@@ -89,7 +91,8 @@ if __name__ == '__main__':
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
-    dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True),
+    dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True,
+                                         label_datasetA=opt.label_datasetA, label_datasetB=opt.label_datasetB),
                             batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
     # Loss plot
@@ -100,8 +103,8 @@ if __name__ == '__main__':
     for epoch in range(opt.epoch, opt.n_epochs):
         for i, batch in enumerate(dataloader):
             # Set model input
-            real_A = Variable(input_A.copy_(batch['A']))
-            real_B = Variable(input_B.copy_(batch['B']))
+            real_A = Variable(input_A.copy_(batch[opt.label_datasetA]))
+            real_B = Variable(input_B.copy_(batch[opt.label_datasetB]))
 
             ###### Generators A2B and B2A ######
             optimizer_G.zero_grad()
@@ -178,16 +181,19 @@ if __name__ == '__main__':
             # Progress report (http://localhost:8097)
             logger.log({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
                         'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)},
-                        images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
+                        images={'real_'+opt.label_datasetA: real_A, 'real_'+opt.label_datasetB: real_B,
+                                'fake_'+opt.label_datasetA: fake_A, 'fake_'+opt.label_datasetB: fake_B})
 
+            torch.save(netG_A2B.state_dict(),
+                       'cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth')
+            torch.save(netG_B2A.state_dict(),
+                       'cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth')
+            torch.save(netD_A.state_dict(), 'cycleGAN/output/netD_' + opt.label_datasetA + '.pth')
+            torch.save(netD_B.state_dict(), 'cycleGAN/output/netD_' + opt.label_datasetB + '.pth')
         # Update learning rates
         lr_scheduler_G.step()
         lr_scheduler_D_A.step()
         lr_scheduler_D_B.step()
 
-        # Save models checkpoints
-        torch.save(netG_A2B.state_dict(), 'cycleGAN/output/netG_A2B.pth')
-        torch.save(netG_B2A.state_dict(), 'cycleGAN/output/netG_B2A.pth')
-        torch.save(netD_A.state_dict(), 'cycleGAN/output/netD_A.pth')
-        torch.save(netD_B.state_dict(), 'cycleGAN/output/netD_B.pth')
+
     ###################################
