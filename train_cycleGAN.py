@@ -20,20 +20,28 @@ import os
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
+#os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
-parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
-parser.add_argument('--dataroot', type=str, default='data/visualgenome2artpedia/', help='root directory of the dataset')
+parser.add_argument('--n_epochs', type=int, default=20, help='number of epochs of training')
+parser.add_argument('--batchSize', type=int, default=16, help='size of the batches')
+parser.add_argument('--datarootA', type=str, default='', help='directories of the dataset A')
+parser.add_argument('--percent_trainA', type=float, default=60, help='percent of data to use for train A'
+                                                                      '(None if splitting is in dir)')
+parser.add_argument('--datarootB', type=str, default='', help='directories of the dataset B')
+parser.add_argument('--percent_trainB', type=float, default=None, help='percent of data to use for train B'
+                                                                      '(None if splitting is in dir)')
 parser.add_argument('--label_datasetA', type=str,default='visualgenome', help='label of the dataset to transform')
 parser.add_argument('--label_datasetB', type=str,default='artpedia', help='label of the dataset to transformation')
-parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
-parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
-parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
+parser.add_argument('--lr', type=float, default=0.00001, help='initial learning rate')
+parser.add_argument('--decay_epoch', type=int, default=10, help='epoch to start linearly decaying the learning rate to 0')
+parser.add_argument('--size', type=int, default=128, help='size of the data crop (squared assumed)')
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
-parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=16, help='number of cpu threads to use during batch generation')
 opt = parser.parse_args()
 print(opt)
 
@@ -86,13 +94,16 @@ if __name__ == '__main__':
     fake_B_buffer = ReplayBuffer()
 
     # Dataset loader
-    transforms_ = [ transforms.Resize(int(opt.size*1.12), Image.BICUBIC),
+    transforms_ = [ transforms.Resize(int(int(opt.size*1.12)), Image.BICUBIC),
                     transforms.RandomCrop(opt.size),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
-    dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True,
-                                         label_datasetA=opt.label_datasetA, label_datasetB=opt.label_datasetB),
+    datarootA = opt.datarootA.split(",")
+    datarootB = opt.datarootB.split(",")
+    dataloader = DataLoader(ImageDataset(pathA=datarootA, pathB=datarootB, transforms_=transforms_, unaligned=True,
+                                         label_datasetA=opt.label_datasetA, label_datasetB=opt.label_datasetB,
+                                         percent_trainA=opt.percent_trainA, percent_trainB=opt.percent_trainB),
                             batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
     # Loss plot
