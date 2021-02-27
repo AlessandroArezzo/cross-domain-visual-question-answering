@@ -42,6 +42,8 @@ parser.add_argument('--input_nc', type=int, default=3, help='number of channels 
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
 parser.add_argument('--n_cpu', type=int, default=16, help='number of cpu threads to use during batch generation')
+parser.add_argument('--load_models', type=bool, default=False, help='set if the models must be read from files')
+
 opt = parser.parse_args()
 print(opt)
 
@@ -63,10 +65,17 @@ if __name__ == '__main__':
         netD_A.cuda()
         netD_B.cuda()
 
-    netG_A2B.apply(weights_init_normal)
-    netG_B2A.apply(weights_init_normal)
-    netD_A.apply(weights_init_normal)
-    netD_B.apply(weights_init_normal)
+    if opt.load_models:
+        netG_A2B.load_state_dict(torch.load( 'cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth'))
+        netG_B2A.load_state_dict(torch.load( 'cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth'))
+        netD_A.load_state_dict(torch.load(  'cycleGAN/output/netD_' + opt.label_datasetA + '.pth'))
+        netD_B.load_state_dict(torch.load(  'cycleGAN/output/netD_' + opt.label_datasetB + '.pth'))
+
+    else:
+        netG_A2B.apply(weights_init_normal)
+        netG_B2A.apply(weights_init_normal)
+        netD_A.apply(weights_init_normal)
+        netD_B.apply(weights_init_normal)
 
     # Lossess
     criterion_GAN = torch.nn.MSELoss()
@@ -107,7 +116,7 @@ if __name__ == '__main__':
                             batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
     # Loss plot
-    logger = Logger(opt.n_epochs, len(dataloader))
+    logger = Logger(opt.n_epochs, len(dataloader), opt.epoch)
     ###################################
 
     ###### Training ######
@@ -195,16 +204,16 @@ if __name__ == '__main__':
                         images={'real_'+opt.label_datasetA: real_A, 'real_'+opt.label_datasetB: real_B,
                                 'fake_'+opt.label_datasetA: fake_A, 'fake_'+opt.label_datasetB: fake_B})
 
-            torch.save(netG_A2B.state_dict(),
-                       'cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth')
-            torch.save(netG_B2A.state_dict(),
-                       'cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth')
-            torch.save(netD_A.state_dict(), 'cycleGAN/output/netD_' + opt.label_datasetA + '.pth')
-            torch.save(netD_B.state_dict(), 'cycleGAN/output/netD_' + opt.label_datasetB + '.pth')
         # Update learning rates
         lr_scheduler_G.step()
         lr_scheduler_D_A.step()
         lr_scheduler_D_B.step()
 
+        torch.save(netG_A2B.state_dict(),
+                   'cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth')
+        torch.save(netG_B2A.state_dict(),
+                   'cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth')
+        torch.save(netD_A.state_dict(), 'cycleGAN/output/netD_' + opt.label_datasetA + '.pth')
+        torch.save(netD_B.state_dict(), 'cycleGAN/output/netD_' + opt.label_datasetB + '.pth')
 
     ###################################
