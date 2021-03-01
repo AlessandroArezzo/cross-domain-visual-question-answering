@@ -5,17 +5,20 @@ import os
 from torch.utils.data import Dataset
 from PIL import Image, UnidentifiedImageError
 import torchvision.transforms as transforms
+from random import shuffle
+
 Image.MAX_IMAGE_PIXELS = 2553880864
 Image.LOAD_TRUNCATED_IMAGES = True
 
 class ImageDataset(Dataset):
     def __init__(self, pathA, pathB=[], transforms_=None, unaligned=False, mode='train', label_datasetA="A",
-                 label_datasetB="B", transform_mode=False, percent_trainA=None, percent_trainB=None):
+                 label_datasetB="B", transform_mode=False, percent_trainA=None, percent_trainB=None, shuffle=True):
         assert mode == 'train' or mode == 'test'
         self.transform = transforms.Compose(transforms_)
         self.unaligned = unaligned
         self.label_datasetA = label_datasetA
         self.label_datasetB = label_datasetB
+        self.shuffle = shuffle
         self.files_A = self.__read_images_from_path(pathA, mode, percent_trainA)
         if not transform_mode:
             self.files_B = self.__read_images_from_path(pathB, mode, percent_trainB)
@@ -45,7 +48,9 @@ class ImageDataset(Dataset):
             if percent_train == None:
                 files_to_add += sorted(glob.glob(os.path.join(dir, mode) + '/*.*'))
             else:
-                files = sorted(glob.glob(os.path.join(dir) + '/*.*'))
+                files = glob.glob(os.path.join(dir) + '/*.*')
+                if self.shuffle:
+                    shuffle(files)
                 if mode == 'train':
                     files_to_add += files[:int(len(files) * percent_train / 100)]
                 else:
