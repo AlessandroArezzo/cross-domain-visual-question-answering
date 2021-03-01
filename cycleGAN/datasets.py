@@ -19,7 +19,7 @@ class ImageDataset(Dataset):
         self.label_datasetA = label_datasetA
         self.label_datasetB = label_datasetB
         self.shuffle = shuffle
-        self.files_A = self.__read_images_from_path(pathA, mode, percent_trainA)
+        self.files_A = self.__read_images_from_path(pathA, mode, percent_trainA, transform_mode)
         if not transform_mode:
             self.files_B = self.__read_images_from_path(pathB, mode, percent_trainB)
         self.transform_mode = transform_mode
@@ -39,14 +39,16 @@ class ImageDataset(Dataset):
 
             return {self.label_datasetA: item_A, self.label_datasetB: item_B}
         else:
-             item = self.transform(Image.open(self.files_A[index % len(self.files_A)]))
+             item = self.transform(Image.open(self.files_A[index % len(self.files_A)]).convert("RGB"))
              return {self.label_datasetA: item}
 
-    def __read_images_from_path(self, path, mode, percent_train):
+    def __read_images_from_path(self, path, mode, percent_train, transform_mode=False):
         files_to_add = []
         for dir in path:
-            if percent_train == None:
+            if percent_train == None and not transform_mode:
                 files_to_add += sorted(glob.glob(os.path.join(dir, mode) + '/*.*'))
+            elif percent_train == None and transform_mode:
+                files_to_add += sorted(glob.glob(dir + '/*.*'))
             else:
                 files = glob.glob(os.path.join(dir) + '/*.*')
                 if self.shuffle:
