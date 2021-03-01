@@ -61,14 +61,14 @@ class Logger():
             for loss_name, loss in self.losses.items():
                 # Reset losses for next epoch
                 self.losses[loss_name] = 0.0
-            """
+
             # Plot losses
                 if loss_name not in self.loss_windows:
-                    self.loss_windows[loss_name] = self.viz.line(X=np.array([self.epoch]), Y=np.array([loss/self.batch]),
+                    self.loss_windows[loss_name] = self.viz.line(X=np.array([float(self.epoch)]), Y=np.array([float(loss/self.batch)]),
                                                                     opts={'xlabel': 'epochs', 'ylabel': loss_name, 'title': loss_name})
                 else:
-                    self.viz.line(X=np.array([self.epoch]), Y=np.array([loss/self.batch]), win=self.loss_windows[loss_name], update='append')
-            """
+                    self.viz.line(X=np.array([float(self.epoch)]), Y=np.array([float(loss/self.batch)]), win=self.loss_windows[loss_name], update='append')
+
 
             self.epoch += 1
             self.batch = 1
