@@ -25,7 +25,7 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
-parser.add_argument('--n_epochs', type=int, default=20, help='number of epochs of training')
+parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
 parser.add_argument('--datarootA', type=str, default='', help='directories of the dataset A')
 parser.add_argument('--percent_trainA', type=float, default=70, help='percent of data to use for train A'
@@ -36,7 +36,7 @@ parser.add_argument('--percent_trainB', type=float, default=None, help='percent 
 parser.add_argument('--label_datasetA', type=str,default='visualgenome', help='label of the dataset to transform')
 parser.add_argument('--label_datasetB', type=str,default='artpedia', help='label of the dataset to transformation')
 parser.add_argument('--lr', type=float, default=0.00001, help='initial learning rate')
-parser.add_argument('--decay_epoch', type=int, default=10, help='epoch to start linearly decaying the learning rate to 0')
+parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
 parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
@@ -66,10 +66,25 @@ if __name__ == '__main__':
         netD_B.cuda()
 
     if opt.load_models:
-        netG_A2B.load_state_dict(torch.load( 'cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth'))
-        netG_B2A.load_state_dict(torch.load( 'cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth'))
-        netD_A.load_state_dict(torch.load(  'cycleGAN/output/netD_' + opt.label_datasetA + '.pth'))
-        netD_B.load_state_dict(torch.load(  'cycleGAN/output/netD_' + opt.label_datasetB + '.pth'))
+        try:
+            netG_A2B.load_state_dict(torch.load( 'cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth'))
+            netG_B2A.load_state_dict(torch.load( 'cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth'))
+            netD_A.load_state_dict(torch.load(  'cycleGAN/output/netD_' + opt.label_datasetA + '.pth'))
+            netD_B.load_state_dict(torch.load(  'cycleGAN/output/netD_' + opt.label_datasetB + '.pth'))
+        except RuntimeError:
+            if not opt.cuda:
+                netG_A2B.load_state_dict(
+                    torch.load('cycleGAN/output/netG_' + opt.label_datasetA + '2' + opt.label_datasetB + '.pth',
+                               map_location=torch.device('cpu')))
+                netG_B2A.load_state_dict(
+                    torch.load('cycleGAN/output/netG_' + opt.label_datasetB + '2' + opt.label_datasetA + '.pth',
+                               map_location=torch.device('cpu')))
+                netD_A.load_state_dict(torch.load('cycleGAN/output/netD_' + opt.label_datasetA + '.pth',
+                              map_location=torch.device('cpu')))
+                netD_B.load_state_dict(torch.load('cycleGAN/output/netD_' + opt.label_datasetB + '.pth',
+                              map_location=torch.device('cpu')))
+            else:
+                RuntimeError()
 
     else:
         netG_A2B.apply(weights_init_normal)
